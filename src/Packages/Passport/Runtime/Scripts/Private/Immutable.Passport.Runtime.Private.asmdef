@@ -12,7 +12,8 @@
         "Editor",
         "iOS",
         "macOSStandalone",
-        "WindowsStandalone64"
+        "WindowsStandalone64",
+        "LinuxStandalone64"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
