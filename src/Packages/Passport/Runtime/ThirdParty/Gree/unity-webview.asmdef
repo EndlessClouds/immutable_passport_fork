@@ -8,7 +8,9 @@
         "Android",
         "Editor",
         "iOS",
-        "macOSStandalone"
+        "macOSStandalone",
+        "LinuxStandalone64",
+        "WindowsStandalone64"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
