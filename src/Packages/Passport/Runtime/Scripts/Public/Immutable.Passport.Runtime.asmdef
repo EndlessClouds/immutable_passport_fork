@@ -9,13 +9,6 @@
         "Immutable.Passport.Runtime.Private",
         "Immutable.Passport.Core.Logging"
     ],
-    "includePlatforms": [
-        "Android",
-        "Editor",
-        "iOS",
-        "macOSStandalone",
-        "WindowsStandalone64"
-    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
