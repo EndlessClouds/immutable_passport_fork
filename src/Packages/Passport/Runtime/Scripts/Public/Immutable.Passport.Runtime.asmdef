@@ -15,7 +15,8 @@
         "iOS",
         "macOSStandalone",
         "WebGL",
-        "WindowsStandalone64"
+        "WindowsStandalone64",
+        "LinuxStandalone64"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
@@ -25,7 +26,9 @@
         "VoltstroStudios.UnityWebBrowser.Shared.dll"
     ],
     "autoReferenced": true,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "GAME_CLIENT || !RUNTIME_BUILD"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }

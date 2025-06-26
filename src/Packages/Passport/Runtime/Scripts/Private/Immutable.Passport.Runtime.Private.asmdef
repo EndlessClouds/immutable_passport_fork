@@ -14,7 +14,8 @@
         "iOS",
         "macOSStandalone",
         "WindowsStandalone64",
-        "WebGL"
+        "WebGL",
+        "LinuxStandalone64"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
@@ -23,7 +24,9 @@
         "Newtonsoft.Json.dll"
     ],
     "autoReferenced": true,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "GAME_CLIENT || !RUNTIME_BUILD"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }
