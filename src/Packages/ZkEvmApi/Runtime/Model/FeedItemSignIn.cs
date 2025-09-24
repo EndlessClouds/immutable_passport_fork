@@ -32,6 +32,27 @@ namespace Immutable.Api.ZkEvm.Model
     public partial class FeedItemSignIn
     {
         /// <summary>
+        /// Feed item type
+        /// </summary>
+        /// <value>Feed item type</value>
+        [JsonConverter(typeof(StringEnumConverter))]
+        public enum TypeEnum
+        {
+            /// <summary>
+            /// Enum Signin for value: signin
+            /// </summary>
+            [EnumMember(Value = "signin")]
+            Signin = 1
+        }
+
+
+        /// <summary>
+        /// Feed item type
+        /// </summary>
+        /// <value>Feed item type</value>
+        [DataMember(Name = "type", IsRequired = true, EmitDefaultValue = true)]
+        public TypeEnum Type { get; set; }
+        /// <summary>
         /// Initializes a new instance of the <see cref="FeedItemSignIn" /> class.
         /// </summary>
         [JsonConstructorAttribute]
@@ -39,16 +60,10 @@ namespace Immutable.Api.ZkEvm.Model
         /// <summary>
         /// Initializes a new instance of the <see cref="FeedItemSignIn" /> class.
         /// </summary>
-        /// <param name="signInRedirectUrl">The URL to redirect to when the user completes the sign in quest (required).</param>
-        /// <param name="signInBackground">The background for the sign in quest (required).</param>
-        /// <param name="ctaLabel">The label for the CTA button (required).</param>
-        /// <param name="ctaDescription">The description for the CTA button (required).</param>
-        /// <param name="ctaUrl">The URL for the CTA button (required).</param>
-        /// <param name="ctaImage">The image for the CTA background (required).</param>
         /// <param name="id">Feed item ID (required).</param>
+        /// <param name="name">Feed item name (required).</param>
         /// <param name="questId">Quest ID (required).</param>
         /// <param name="priority">Feed item priority (required).</param>
-        /// <param name="type">Feed item type (required).</param>
         /// <param name="gemsEarnable">Amount of gems earnable when user completes the quest (required).</param>
         /// <param name="bypass">If the quest is bypassed, the user will not be able to see it on the feed.</param>
         /// <param name="dayZero">If the quest is a day0 quest.</param>
@@ -58,50 +73,27 @@ namespace Immutable.Api.ZkEvm.Model
         /// <param name="tags">The tags for the feed item.</param>
         /// <param name="categories">The categories for the feed item.</param>
         /// <param name="onboardingExperience">The onboarding experience for the feed item.</param>
-        public FeedItemSignIn(string signInRedirectUrl = default(string), string signInBackground = default(string), string ctaLabel = default(string), string ctaDescription = default(string), string ctaUrl = default(string), string ctaImage = default(string), string id = default(string), string questId = default(string), int priority = default(int), string type = default(string), int gemsEarnable = default(int), bool bypass = default(bool), bool dayZero = default(bool), string gameId = default(string), string gameName = default(string), string questCompletedPopupText = default(string), List<string> tags = default(List<string>), List<string> categories = default(List<string>), string onboardingExperience = default(string))
+        /// <param name="type">Feed item type (required).</param>
+        /// <param name="label">The label for the CTA button (required).</param>
+        /// <param name="description">The description for the CTA button (required).</param>
+        /// <param name="url">The URL for the CTA button (required).</param>
+        /// <param name="image">The image for the CTA background (required).</param>
+        /// <param name="redirectUrl">The URL to redirect to when the user completes the sign in quest (required).</param>
+        /// <param name="background">The background for the sign in quest (required).</param>
+        public FeedItemSignIn(string id = default(string), string name = default(string), string questId = default(string), int priority = default(int), int gemsEarnable = default(int), bool bypass = default(bool), bool dayZero = default(bool), Guid gameId = default(Guid), string gameName = default(string), string questCompletedPopupText = default(string), List<string> tags = default(List<string>), List<string> categories = default(List<string>), string onboardingExperience = default(string), TypeEnum type = default(TypeEnum), string label = default(string), string description = default(string), string url = default(string), string image = default(string), string redirectUrl = default(string), string background = default(string))
         {
-            // to ensure "signInRedirectUrl" is required (not null)
-            if (signInRedirectUrl == null)
-            {
-                throw new ArgumentNullException("signInRedirectUrl is a required property for FeedItemSignIn and cannot be null");
-            }
-            this.SignInRedirectUrl = signInRedirectUrl;
-            // to ensure "signInBackground" is required (not null)
-            if (signInBackground == null)
-            {
-                throw new ArgumentNullException("signInBackground is a required property for FeedItemSignIn and cannot be null");
-            }
-            this.SignInBackground = signInBackground;
-            // to ensure "ctaLabel" is required (not null)
-            if (ctaLabel == null)
-            {
-                throw new ArgumentNullException("ctaLabel is a required property for FeedItemSignIn and cannot be null");
-            }
-            this.CtaLabel = ctaLabel;
-            // to ensure "ctaDescription" is required (not null)
-            if (ctaDescription == null)
-            {
-                throw new ArgumentNullException("ctaDescription is a required property for FeedItemSignIn and cannot be null");
-            }
-            this.CtaDescription = ctaDescription;
-            // to ensure "ctaUrl" is required (not null)
-            if (ctaUrl == null)
-            {
-                throw new ArgumentNullException("ctaUrl is a required property for FeedItemSignIn and cannot be null");
-            }
-            this.CtaUrl = ctaUrl;
-            // to ensure "ctaImage" is required (not null)
-            if (ctaImage == null)
-            {
-                throw new ArgumentNullException("ctaImage is a required property for FeedItemSignIn and cannot be null");
-            }
-            this.CtaImage = ctaImage;
             // to ensure "id" is required (not null)
             if (id == null)
             {
                 throw new ArgumentNullException("id is a required property for FeedItemSignIn and cannot be null");
             }
             this.Id = id;
+            // to ensure "name" is required (not null)
+            if (name == null)
+            {
+                throw new ArgumentNullException("name is a required property for FeedItemSignIn and cannot be null");
+            }
+            this.Name = name;
             // to ensure "questId" is required (not null)
             if (questId == null)
             {
@@ -109,13 +101,44 @@ namespace Immutable.Api.ZkEvm.Model
             }
             this.QuestId = questId;
             this.Priority = priority;
-            // to ensure "type" is required (not null)
-            if (type == null)
-            {
-                throw new ArgumentNullException("type is a required property for FeedItemSignIn and cannot be null");
-            }
-            this.Type = type;
             this.GemsEarnable = gemsEarnable;
+            this.Type = type;
+            // to ensure "label" is required (not null)
+            if (label == null)
+            {
+                throw new ArgumentNullException("label is a required property for FeedItemSignIn and cannot be null");
+            }
+            this.Label = label;
+            // to ensure "description" is required (not null)
+            if (description == null)
+            {
+                throw new ArgumentNullException("description is a required property for FeedItemSignIn and cannot be null");
+            }
+            this.Description = description;
+            // to ensure "url" is required (not null)
+            if (url == null)
+            {
+                throw new ArgumentNullException("url is a required property for FeedItemSignIn and cannot be null");
+            }
+            this.Url = url;
+            // to ensure "image" is required (not null)
+            if (image == null)
+            {
+                throw new ArgumentNullException("image is a required property for FeedItemSignIn and cannot be null");
+            }
+            this.Image = image;
+            // to ensure "redirectUrl" is required (not null)
+            if (redirectUrl == null)
+            {
+                throw new ArgumentNullException("redirectUrl is a required property for FeedItemSignIn and cannot be null");
+            }
+            this.RedirectUrl = redirectUrl;
+            // to ensure "background" is required (not null)
+            if (background == null)
+            {
+                throw new ArgumentNullException("background is a required property for FeedItemSignIn and cannot be null");
+            }
+            this.Background = background;
             this.Bypass = bypass;
             this.DayZero = dayZero;
             this.GameId = gameId;
@@ -127,53 +150,18 @@ namespace Immutable.Api.ZkEvm.Model
         }
 
         /// <summary>
-        /// The URL to redirect to when the user completes the sign in quest
-        /// </summary>
-        /// <value>The URL to redirect to when the user completes the sign in quest</value>
-        [DataMember(Name = "sign_in_redirect_url", IsRequired = true, EmitDefaultValue = true)]
-        public string SignInRedirectUrl { get; set; }
-
-        /// <summary>
-        /// The background for the sign in quest
-        /// </summary>
-        /// <value>The background for the sign in quest</value>
-        [DataMember(Name = "sign_in_background", IsRequired = true, EmitDefaultValue = true)]
-        public string SignInBackground { get; set; }
-
-        /// <summary>
-        /// The label for the CTA button
-        /// </summary>
-        /// <value>The label for the CTA button</value>
-        [DataMember(Name = "cta_label", IsRequired = true, EmitDefaultValue = true)]
-        public string CtaLabel { get; set; }
-
-        /// <summary>
-        /// The description for the CTA button
-        /// </summary>
-        /// <value>The description for the CTA button</value>
-        [DataMember(Name = "cta_description", IsRequired = true, EmitDefaultValue = true)]
-        public string CtaDescription { get; set; }
-
-        /// <summary>
-        /// The URL for the CTA button
-        /// </summary>
-        /// <value>The URL for the CTA button</value>
-        [DataMember(Name = "cta_url", IsRequired = true, EmitDefaultValue = true)]
-        public string CtaUrl { get; set; }
-
-        /// <summary>
-        /// The image for the CTA background
-        /// </summary>
-        /// <value>The image for the CTA background</value>
-        [DataMember(Name = "cta_image", IsRequired = true, EmitDefaultValue = true)]
-        public string CtaImage { get; set; }
-
-        /// <summary>
         /// Feed item ID
         /// </summary>
         /// <value>Feed item ID</value>
         [DataMember(Name = "id", IsRequired = true, EmitDefaultValue = true)]
         public string Id { get; set; }
+
+        /// <summary>
+        /// Feed item name
+        /// </summary>
+        /// <value>Feed item name</value>
+        [DataMember(Name = "name", IsRequired = true, EmitDefaultValue = true)]
+        public string Name { get; set; }
 
         /// <summary>
         /// Quest ID
@@ -188,13 +176,6 @@ namespace Immutable.Api.ZkEvm.Model
         /// <value>Feed item priority</value>
         [DataMember(Name = "priority", IsRequired = true, EmitDefaultValue = true)]
         public int Priority { get; set; }
-
-        /// <summary>
-        /// Feed item type
-        /// </summary>
-        /// <value>Feed item type</value>
-        [DataMember(Name = "type", IsRequired = true, EmitDefaultValue = true)]
-        public string Type { get; set; }
 
         /// <summary>
         /// Amount of gems earnable when user completes the quest
@@ -222,7 +203,7 @@ namespace Immutable.Api.ZkEvm.Model
         /// </summary>
         /// <value>Game ID</value>
         [DataMember(Name = "game_id", EmitDefaultValue = false)]
-        public string GameId { get; set; }
+        public Guid GameId { get; set; }
 
         /// <summary>
         /// Game name
@@ -260,6 +241,48 @@ namespace Immutable.Api.ZkEvm.Model
         public string OnboardingExperience { get; set; }
 
         /// <summary>
+        /// The label for the CTA button
+        /// </summary>
+        /// <value>The label for the CTA button</value>
+        [DataMember(Name = "label", IsRequired = true, EmitDefaultValue = true)]
+        public string Label { get; set; }
+
+        /// <summary>
+        /// The description for the CTA button
+        /// </summary>
+        /// <value>The description for the CTA button</value>
+        [DataMember(Name = "description", IsRequired = true, EmitDefaultValue = true)]
+        public string Description { get; set; }
+
+        /// <summary>
+        /// The URL for the CTA button
+        /// </summary>
+        /// <value>The URL for the CTA button</value>
+        [DataMember(Name = "url", IsRequired = true, EmitDefaultValue = true)]
+        public string Url { get; set; }
+
+        /// <summary>
+        /// The image for the CTA background
+        /// </summary>
+        /// <value>The image for the CTA background</value>
+        [DataMember(Name = "image", IsRequired = true, EmitDefaultValue = true)]
+        public string Image { get; set; }
+
+        /// <summary>
+        /// The URL to redirect to when the user completes the sign in quest
+        /// </summary>
+        /// <value>The URL to redirect to when the user completes the sign in quest</value>
+        [DataMember(Name = "redirect_url", IsRequired = true, EmitDefaultValue = true)]
+        public string RedirectUrl { get; set; }
+
+        /// <summary>
+        /// The background for the sign in quest
+        /// </summary>
+        /// <value>The background for the sign in quest</value>
+        [DataMember(Name = "background", IsRequired = true, EmitDefaultValue = true)]
+        public string Background { get; set; }
+
+        /// <summary>
         /// Returns the string presentation of the object
         /// </summary>
         /// <returns>String presentation of the object</returns>
@@ -267,16 +290,10 @@ namespace Immutable.Api.ZkEvm.Model
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("class FeedItemSignIn {\n");
-            sb.Append("  SignInRedirectUrl: ").Append(SignInRedirectUrl).Append("\n");
-            sb.Append("  SignInBackground: ").Append(SignInBackground).Append("\n");
-            sb.Append("  CtaLabel: ").Append(CtaLabel).Append("\n");
-            sb.Append("  CtaDescription: ").Append(CtaDescription).Append("\n");
-            sb.Append("  CtaUrl: ").Append(CtaUrl).Append("\n");
-            sb.Append("  CtaImage: ").Append(CtaImage).Append("\n");
             sb.Append("  Id: ").Append(Id).Append("\n");
+            sb.Append("  Name: ").Append(Name).Append("\n");
             sb.Append("  QuestId: ").Append(QuestId).Append("\n");
             sb.Append("  Priority: ").Append(Priority).Append("\n");
-            sb.Append("  Type: ").Append(Type).Append("\n");
             sb.Append("  GemsEarnable: ").Append(GemsEarnable).Append("\n");
             sb.Append("  Bypass: ").Append(Bypass).Append("\n");
             sb.Append("  DayZero: ").Append(DayZero).Append("\n");
@@ -286,6 +303,13 @@ namespace Immutable.Api.ZkEvm.Model
             sb.Append("  Tags: ").Append(Tags).Append("\n");
             sb.Append("  Categories: ").Append(Categories).Append("\n");
             sb.Append("  OnboardingExperience: ").Append(OnboardingExperience).Append("\n");
+            sb.Append("  Type: ").Append(Type).Append("\n");
+            sb.Append("  Label: ").Append(Label).Append("\n");
+            sb.Append("  Description: ").Append(Description).Append("\n");
+            sb.Append("  Url: ").Append(Url).Append("\n");
+            sb.Append("  Image: ").Append(Image).Append("\n");
+            sb.Append("  RedirectUrl: ").Append(RedirectUrl).Append("\n");
+            sb.Append("  Background: ").Append(Background).Append("\n");
             sb.Append("}\n");
             return sb.ToString();
         }

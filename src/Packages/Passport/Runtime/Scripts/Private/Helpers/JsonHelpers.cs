@@ -12,7 +12,7 @@ namespace Immutable.Passport.Helpers
         /// <summary>
         /// Return null if the deserialisation fails.
         /// </summary> 
-        public static T OptDeserializeObject<T>(this string json) where T : class
+        public static T? OptDeserializeObject<T>(this string json) where T : class
         {
             try
             {
@@ -80,7 +80,9 @@ namespace Immutable.Passport.Helpers
         [Serializable]
         private class Wrapper<T>
         {
+#pragma warning disable CS8618
             public T[] Items;
+#pragma warning restore CS8618
         }
     }
 }

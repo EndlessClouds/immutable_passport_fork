@@ -2,6 +2,10 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEditor;
 using UnityEngine;
 using Immutable.Passport.Core.Logging;
@@ -11,7 +15,7 @@ namespace Immutable.Passport.Helpers
 {
     public class WindowsDeepLink : MonoBehaviour
     {
-        private const string RegistryDeepLinkName = "deeplink";
+        private const string REGISTRY_DEEP_LINK_NAME = "deeplink";
 
         private static WindowsDeepLink? _instance;
         private Action<string>? _callback;
@@ -28,8 +32,8 @@ namespace Immutable.Passport.Helpers
         private static extern int RegCreateKeyEx(
             UIntPtr hKey,
             string lpSubKey,
-            int Reserved,
-            string lpClass,
+            int reserved,
+            string? lpClass,
             uint dwOptions,
             uint samDesired,
             IntPtr lpSecurityAttributes,
@@ -39,8 +43,8 @@ namespace Immutable.Passport.Helpers
         [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern int RegSetValueEx(
             UIntPtr hKey,
-            string lpValueName,
-            int Reserved,
+            string? lpValueName,
+            int reserved,
             uint dwType,
             string lpData,
             uint cbData);
@@ -110,7 +114,7 @@ namespace Immutable.Passport.Helpers
             {
                 "@echo off",
                 // Store deeplink URI in registry
-                $"REG ADD \"HKCU\\Software\\Classes\\{protocolName}\" /v \"{RegistryDeepLinkName}\" /t REG_SZ /d %1 /f >nul 2>&1",
+                $"REG ADD \"HKCU\\Software\\Classes\\{protocolName}\" /v \"{REGISTRY_DEEP_LINK_NAME}\" /t REG_SZ /d %1 /f >nul 2>&1",
                 "setlocal",
                 "",
                 $"set \"PROJECT_PATH={projectPath}\"",
@@ -171,9 +175,9 @@ namespace Immutable.Passport.Helpers
             {
                 "@echo off",
                 // Store deeplink URI in registry
-                $"REG ADD \"HKCU\\Software\\Classes\\{protocolName}\" /v \"{RegistryDeepLinkName}\" /t REG_SZ /d %1 /f >nul 2>&1",
+                $"REG ADD \"HKCU\\Software\\Classes\\{protocolName}\" /v \"{REGISTRY_DEEP_LINK_NAME}\" /t REG_SZ /d %1 /f >nul 2>&1",
                 // Check if game is already running
-                $"tasklist /FI \"IMAGENAME eq {gameExeName}\" 2>NUL | find /I \"{gameExeName}\" >NUL",
+                $"tasklist /FI \"IMAGENAME eq {gameExeName}\" >nul 2>&1",
                 "if %ERRORLEVEL%==0 (",
                 // Bring existing game window to foreground
                 "    powershell -NoProfile -ExecutionPolicy Bypass -Command ^",
@@ -198,7 +202,7 @@ namespace Immutable.Passport.Helpers
             UIntPtr hKey;
             uint disposition;
             // Create registry key for the protocol
-            int result = RegCreateKeyEx(
+            var result = RegCreateKeyEx(
                 (UIntPtr)HKEY_CURRENT_USER,
                 $@"Software\Classes\{protocolName}",
                 0,
@@ -216,9 +220,9 @@ namespace Immutable.Passport.Helpers
 
             // Set the default value for the protocol key to Application.productName
             // This is often used by Windows as the display name for the protocol
-            string appProductName = Application.productName;
-            uint productNameDataSize = (uint)((appProductName.Length + 1) * Marshal.SystemDefaultCharSize); 
-            int setDefaultResult = RegSetValueEx(hKey, null, 0, REG_SZ, appProductName, productNameDataSize);
+            var appProductName = Application.productName;
+            var productNameDataSize = (uint)((appProductName.Length + 1) * Marshal.SystemDefaultCharSize); 
+            var setDefaultResult = RegSetValueEx(hKey, null, 0, REG_SZ, appProductName, productNameDataSize);
 
             if (setDefaultResult != 0)
             {
@@ -264,18 +268,48 @@ namespace Immutable.Passport.Helpers
             RegCloseKey(commandKey);
             RegCloseKey(hKey);
         }
-
+        
         private static string GetGameExecutablePath(string suffix)
         {
-            var exeName = Application.productName + suffix;
-#if UNITY_EDITOR_WIN
-            // Returns the persistent data path in editor
-            return Path.Combine(Application.persistentDataPath, exeName).Replace("/", "\\");
-#else
-            // Returns game root directory in build
-            var exePath = Path.Combine(Application.dataPath, "../");
-            return Path.Combine(exePath, exeName).Replace("/", "\\");
+#if !UNITY_EDITOR_WIN
+            if (suffix == ".exe")
+            {
+                // Get the path of the currently running executable
+#if !ENABLE_IL2CPP
+                // Process.MainModule is only supported in Mono builds, not in IL2CPP, and will cause a crash
+                try
+                {
+                    var process = System.Diagnostics.Process.GetCurrentProcess();
+                    if (process?.MainModule?.FileName != null)
+                    {
+                        return process.MainModule.FileName.Replace("/", "\\");
+                    }
+                }
+                catch (System.ComponentModel.Win32Exception ex)
+                {
+                    PassportLogger.Warn($"Failed to get process MainModule: {ex.Message}. Using fallback method.");
+                }
+                catch (System.InvalidOperationException ex)
+                {
+                    PassportLogger.Warn($"Process inaccessible: {ex.Message}. Using fallback method.");
+                }
 #endif
+
+                // Fallback: Use command line args
+                var args = System.Environment.GetCommandLineArgs();
+                if (args.Length > 0 && !string.IsNullOrEmpty(args[0]))
+                {
+                    var exePath = Path.GetFullPath(args[0]);
+                    if (File.Exists(exePath))
+                    {
+                        return exePath.Replace("/", "\\");
+                    }
+                }
+            }
+#endif
+            // For the editor, or for .cmd files in a build, use persistentDataPath as it's a writable location
+            var fileName = Application.productName + suffix;
+            return Path.Combine(Application.persistentDataPath, fileName).Replace("/", "\\");
         }
 
         private void OnApplicationFocus(bool hasFocus)
@@ -289,9 +323,9 @@ namespace Immutable.Passport.Helpers
         private void HandleDeeplink()
         {
             // Open registry key for the protocol
-            string registryPath = $@"Software\Classes\{_protocolName}";
+            var registryPath = $@"Software\Classes\{_protocolName}";
             UIntPtr hKey;
-            int result = RegOpenKeyEx(
+            var result = RegOpenKeyEx(
                 (UIntPtr)HKEY_CURRENT_USER,
                 registryPath,
                 0,
@@ -307,7 +341,7 @@ namespace Immutable.Passport.Helpers
             // Get size of deeplink data
             uint type = 0;
             uint dataSize = 0;
-            result = RegQueryValueEx(hKey, RegistryDeepLinkName, IntPtr.Zero, ref type, null!, ref dataSize);
+            result = RegQueryValueEx(hKey, REGISTRY_DEEP_LINK_NAME, IntPtr.Zero, ref type, null!, ref dataSize);
 
             if (result != 0)
             {
@@ -318,7 +352,7 @@ namespace Immutable.Passport.Helpers
 
             // Read deeplink data
             var data = new byte[dataSize];
-            result = RegQueryValueEx(hKey, RegistryDeepLinkName, IntPtr.Zero, ref type, data, ref dataSize);
+            result = RegQueryValueEx(hKey, REGISTRY_DEEP_LINK_NAME, IntPtr.Zero, ref type, data, ref dataSize);
 
             var callbackInvoked = false;
             if (result == 0 && type == REG_SZ)

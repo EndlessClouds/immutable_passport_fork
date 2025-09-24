@@ -1,19 +1,22 @@
 using System;
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using Immutable.Passport;
+using Immutable.Passport.Model;
 
 public class LoginScript : MonoBehaviour
 {
 #pragma warning disable CS8618
     [SerializeField] private Text Output;
-    [SerializeField] private InputField DeviceCodeTimeoutMs;
+    [SerializeField] private Button DefaultLoginButton;
+    [SerializeField] private Button GoogleLoginButton;
+    [SerializeField] private Button AppleLoginButton;
+    [SerializeField] private Button FacebookLoginButton;
     private Passport Passport;
 #pragma warning restore CS8618
 
-    async void Start()
+    void Start()
     {
         if (Passport.Instance != null)
         {
@@ -23,46 +26,63 @@ public class LoginScript : MonoBehaviour
         {
             ShowOutput("Passport Instance is null");
         }
+
+        // Set up button listeners using DirectLoginOptions
+        if (DefaultLoginButton != null) DefaultLoginButton.onClick.AddListener(() => Login(new DirectLoginOptions()));
+        if (GoogleLoginButton != null) GoogleLoginButton.onClick.AddListener(() => Login(new DirectLoginOptions(DirectLoginMethod.Google)));
+        if (AppleLoginButton != null) AppleLoginButton.onClick.AddListener(() => Login(new DirectLoginOptions(DirectLoginMethod.Apple)));
+        if (FacebookLoginButton != null) FacebookLoginButton.onClick.AddListener(() => Login(new DirectLoginOptions(DirectLoginMethod.Facebook)));
     }
 
     /// <summary>
-    /// Logs into Passport using the selected auth method.
+    /// Logs into Passport using the default auth method.
     /// </summary>
     public async void Login()
     {
-        var timeoutMs = GetDeviceCodeTimeoutMs();
-        string formattedTimeout = timeoutMs != null ? $"{timeoutMs} ms" : "none";
-        ShowOutput($"Logging in (timeout: {formattedTimeout})...");
+        await LoginAsync(new DirectLoginOptions());
+    }
+
+    /// <summary>
+    /// Logs into Passport using the specified direct login options.
+    /// </summary>
+    /// <param name="directLoginOptions">The direct login options</param>
+    public async void Login(DirectLoginOptions directLoginOptions)
+    {
+        await LoginAsync(directLoginOptions);
+    }
+
+    /// <summary>
+    /// Internal async method that performs the actual login logic.
+    /// </summary>
+    /// <param name="directLoginOptions">The direct login options</param>
+    private async System.Threading.Tasks.Task LoginAsync(DirectLoginOptions directLoginOptions)
+    {
         try
         {
-            if (SampleAppManager.UsePKCE)
+            string directLoginMethod = directLoginOptions.directLoginMethod.ToString().ToLower();
+
+            ShowOutput($"Logging in with {directLoginMethod} method...");
+
+            bool success = await Passport.Login(useCachedSession: false, directLoginOptions: directLoginOptions);
+
+            if (success)
             {
-                await Passport.LoginPKCE();
+                ShowOutput($"Successfully logged in with {directLoginMethod}");
+                SceneManager.LoadScene("AuthenticatedScene");
             }
             else
             {
-                await Passport.Login(timeoutMs: timeoutMs);
+                ShowOutput($"Failed to log in with {directLoginMethod}");
             }
-            NavigateToAuthenticatedScene();
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            ShowOutput("Failed to login: cancelled");
+            ShowOutput($"Login cancelled: {ex.Message}");
         }
         catch (Exception ex)
         {
-            ShowOutput($"Failed to login: {ex.Message}");
+            ShowOutput($"Login failed: {ex.Message}");
         }
-    }
-
-    private long? GetDeviceCodeTimeoutMs()
-    {
-        return string.IsNullOrEmpty(DeviceCodeTimeoutMs.text) ? null : long.Parse(DeviceCodeTimeoutMs.text);
-    }
-
-    private void NavigateToAuthenticatedScene()
-    {
-        SceneManager.LoadScene("AuthenticatedScene");
     }
 
     private void ShowOutput(string message)
@@ -71,5 +91,7 @@ public class LoginScript : MonoBehaviour
         {
             Output.text = message;
         }
+
+        Debug.Log($"[LoginScript] {message}");
     }
 }

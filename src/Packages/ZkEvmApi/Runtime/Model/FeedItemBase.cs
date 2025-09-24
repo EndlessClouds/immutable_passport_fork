@@ -40,9 +40,9 @@ namespace Immutable.Api.ZkEvm.Model
         /// Initializes a new instance of the <see cref="FeedItemBase" /> class.
         /// </summary>
         /// <param name="id">Feed item ID (required).</param>
+        /// <param name="name">Feed item name (required).</param>
         /// <param name="questId">Quest ID (required).</param>
         /// <param name="priority">Feed item priority (required).</param>
-        /// <param name="type">Feed item type (required).</param>
         /// <param name="gemsEarnable">Amount of gems earnable when user completes the quest (required).</param>
         /// <param name="bypass">If the quest is bypassed, the user will not be able to see it on the feed.</param>
         /// <param name="dayZero">If the quest is a day0 quest.</param>
@@ -52,7 +52,7 @@ namespace Immutable.Api.ZkEvm.Model
         /// <param name="tags">The tags for the feed item.</param>
         /// <param name="categories">The categories for the feed item.</param>
         /// <param name="onboardingExperience">The onboarding experience for the feed item.</param>
-        public FeedItemBase(string id = default(string), string questId = default(string), int priority = default(int), string type = default(string), int gemsEarnable = default(int), bool bypass = default(bool), bool dayZero = default(bool), string gameId = default(string), string gameName = default(string), string questCompletedPopupText = default(string), List<string> tags = default(List<string>), List<string> categories = default(List<string>), string onboardingExperience = default(string))
+        public FeedItemBase(string id = default(string), string name = default(string), string questId = default(string), int priority = default(int), int gemsEarnable = default(int), bool bypass = default(bool), bool dayZero = default(bool), Guid gameId = default(Guid), string gameName = default(string), string questCompletedPopupText = default(string), List<string> tags = default(List<string>), List<string> categories = default(List<string>), string onboardingExperience = default(string))
         {
             // to ensure "id" is required (not null)
             if (id == null)
@@ -60,6 +60,12 @@ namespace Immutable.Api.ZkEvm.Model
                 throw new ArgumentNullException("id is a required property for FeedItemBase and cannot be null");
             }
             this.Id = id;
+            // to ensure "name" is required (not null)
+            if (name == null)
+            {
+                throw new ArgumentNullException("name is a required property for FeedItemBase and cannot be null");
+            }
+            this.Name = name;
             // to ensure "questId" is required (not null)
             if (questId == null)
             {
@@ -67,12 +73,6 @@ namespace Immutable.Api.ZkEvm.Model
             }
             this.QuestId = questId;
             this.Priority = priority;
-            // to ensure "type" is required (not null)
-            if (type == null)
-            {
-                throw new ArgumentNullException("type is a required property for FeedItemBase and cannot be null");
-            }
-            this.Type = type;
             this.GemsEarnable = gemsEarnable;
             this.Bypass = bypass;
             this.DayZero = dayZero;
@@ -92,6 +92,13 @@ namespace Immutable.Api.ZkEvm.Model
         public string Id { get; set; }
 
         /// <summary>
+        /// Feed item name
+        /// </summary>
+        /// <value>Feed item name</value>
+        [DataMember(Name = "name", IsRequired = true, EmitDefaultValue = true)]
+        public string Name { get; set; }
+
+        /// <summary>
         /// Quest ID
         /// </summary>
         /// <value>Quest ID</value>
@@ -104,13 +111,6 @@ namespace Immutable.Api.ZkEvm.Model
         /// <value>Feed item priority</value>
         [DataMember(Name = "priority", IsRequired = true, EmitDefaultValue = true)]
         public int Priority { get; set; }
-
-        /// <summary>
-        /// Feed item type
-        /// </summary>
-        /// <value>Feed item type</value>
-        [DataMember(Name = "type", IsRequired = true, EmitDefaultValue = true)]
-        public string Type { get; set; }
 
         /// <summary>
         /// Amount of gems earnable when user completes the quest
@@ -138,7 +138,7 @@ namespace Immutable.Api.ZkEvm.Model
         /// </summary>
         /// <value>Game ID</value>
         [DataMember(Name = "game_id", EmitDefaultValue = false)]
-        public string GameId { get; set; }
+        public Guid GameId { get; set; }
 
         /// <summary>
         /// Game name
@@ -184,9 +184,9 @@ namespace Immutable.Api.ZkEvm.Model
             StringBuilder sb = new StringBuilder();
             sb.Append("class FeedItemBase {\n");
             sb.Append("  Id: ").Append(Id).Append("\n");
+            sb.Append("  Name: ").Append(Name).Append("\n");
             sb.Append("  QuestId: ").Append(QuestId).Append("\n");
             sb.Append("  Priority: ").Append(Priority).Append("\n");
-            sb.Append("  Type: ").Append(Type).Append("\n");
             sb.Append("  GemsEarnable: ").Append(GemsEarnable).Append("\n");
             sb.Append("  Bypass: ").Append(Bypass).Append("\n");
             sb.Append("  DayZero: ").Append(DayZero).Append("\n");
