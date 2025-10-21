@@ -237,6 +237,7 @@ namespace Immutable.Passport
 #elif (UNITY_ANDROID && !UNITY_EDITOR_WIN) || (UNITY_IPHONE && !UNITY_EDITOR_WIN) || UNITY_STANDALONE_OSX || UNITY_WEBGL
                 // Initialise default browser client for Android, iOS, and macOS
                 _webBrowserClient = new GreeBrowserClient();
+                await UniTask.CompletedTask;
 #else
                 throw new PassportException("Platform not supported");
 #endif
@@ -311,6 +312,19 @@ namespace Immutable.Passport
         public async UniTask<bool> ConnectImx(bool useCachedSession = false, DirectLoginOptions directLoginOptions = null)
         {
             return await GetPassportImpl().ConnectImx(useCachedSession, directLoginOptions);
+        }
+
+        /// <summary>
+        /// Completes the login process by storing tokens received from the Bring Your Own Auth API token exchange endpoint.
+        /// This method enables authentication using existing auth systems without requiring users to log in twice.q
+        /// </summary>
+        /// <param name="request">The token request</param>
+        /// <returns>
+        /// True if successful, otherwise false.
+        /// </returns>
+        public async UniTask<bool> CompleteLogin(TokenResponse request)
+        {
+            return await GetPassportImpl().CompleteLogin(request);
         }
 
         /// <summary>

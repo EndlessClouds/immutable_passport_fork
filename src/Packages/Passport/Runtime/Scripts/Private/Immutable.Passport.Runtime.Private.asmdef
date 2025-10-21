@@ -6,7 +6,9 @@
         "UniTask",
         "Immutable.Browser.Core",
         "Immutable.Browser.Gree",
-        "Immutable.Passport.Core.Logging"
+        "Immutable.Passport.Core.Logging",
+        "Vuplex.WebView",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Android",
@@ -21,12 +23,19 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "Newtonsoft.Json.dll"
+        "Newtonsoft.Json.dll",
+        "VoltstroStudios.UnityWebBrowser.Shared.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": [
         "GAME_CLIENT || !RUNTIME_BUILD"
     ],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "ENABLE_INPUT_SYSTEM"
+        }
+    ],
     "noEngineReferences": false
 }

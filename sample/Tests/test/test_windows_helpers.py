@@ -150,8 +150,18 @@ def logout_with_controlled_browser():
     chrome_options.add_experimental_option("debuggerAddress", "localhost:9222")
     
     try:
-        # Connect to the existing browser instance
-        driver = webdriver.Chrome(options=chrome_options)
+        # Connect to the existing browser instance with explicit paths
+        from selenium.webdriver.chrome.service import Service
+        chromedriver_path = r"C:\Users\WindowsBuildsdkServi\Development\chromedriver-win64\chromedriver-win64\chromedriver.exe"
+        brave_path = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+        
+        # Set Brave as the browser binary
+        chrome_options.binary_location = brave_path
+        
+        # Create service with explicit ChromeDriver path
+        service = Service(executable_path=chromedriver_path)
+            
+        driver = webdriver.Chrome(service=service, options=chrome_options)
         print("Connected to existing browser for logout")
         
         # Monitor Unity logs for logout URL
@@ -278,8 +288,20 @@ def login():
     # (Brave uses Chromium engine so Chrome WebDriver works)
     chrome_options = Options()
     chrome_options.add_experimental_option("debuggerAddress", "localhost:9222")
+    
+    # Explicitly specify ChromeDriver path and Brave browser path
+    from selenium.webdriver.chrome.service import Service
+    chromedriver_path = r"C:\Users\WindowsBuildsdkServi\Development\chromedriver-win64\chromedriver-win64\chromedriver.exe"
+    brave_path = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+    
+    # Set Brave as the browser binary
+    chrome_options.binary_location = brave_path
+    
+    # Create service with explicit ChromeDriver path
+    service = Service(executable_path=chromedriver_path)
+    
     # Connect to the existing Brave browser instance
-    driver = webdriver.Chrome(options=chrome_options)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
 
     # HYBRID APPROACH: Try multi-window detection first (proven to work in CI), 
     # then fall back to Unity log monitoring if needed
@@ -568,7 +590,7 @@ def clear_unity_data():
     print("Unity data cleanup complete")
 
 def open_sample_app(clear_data=False):
-    product_name = get_product_name()
+    product_name = os.getenv("UNITY_APP_NAME", get_product_name())
     
     # Clear any cached login state before opening (only when requested)
     if clear_data:
@@ -601,7 +623,7 @@ def open_sample_app(clear_data=False):
     print(f"{product_name} opened successfully.")
 
 def stop_sample_app():
-    product_name = get_product_name()
+    product_name = os.getenv("UNITY_APP_NAME", get_product_name())
     print(f"Stopping {product_name}...")
     powershell_command = f"""
     $process = Get-Process -Name "{product_name}" -ErrorAction SilentlyContinue
