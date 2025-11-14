@@ -86,7 +86,7 @@ public class CWebViewPluginNoUi {
     }
 
     public CWebViewPluginNoUi() {
-        unityHandler = new Handler(Looper.myLooper());
+        unityHandler = new Handler(Looper.getMainLooper());
     }
 
     public void setCallback(WebViewCallback callback) {
