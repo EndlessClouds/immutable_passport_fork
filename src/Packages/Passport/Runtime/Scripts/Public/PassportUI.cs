@@ -412,7 +412,7 @@ namespace Immutable.Passport
         /// </summary>
         private IPassportWebView CreatePlatformWebView()
         {
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN))
+#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
             PassportLogger.Info($"{TAG} Creating Windows WebView (UWB)");
             return new WindowsPassportWebView(rawImage, this);
 #elif UNITY_IOS && VUPLEX_WEBVIEW
@@ -421,11 +421,11 @@ namespace Immutable.Passport
 #elif UNITY_ANDROID && VUPLEX_WEBVIEW
             PassportLogger.Info($"{TAG} Creating Android WebView (Vuplex)");
             return new AndroidVuplexWebView(rawImage);
-#elif (UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX) && VUPLEX_WEBVIEW
+#elif (UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX && !UNITY_STANDALONE) && VUPLEX_WEBVIEW
             PassportLogger.Info($"{TAG} Creating MacOS WebView (Vuplex)");
             return new MacOSPassportWebView(rawImage);
 #else
-            PassportLogger.Error($"{TAG} WebView not supported on this platform");
+            PassportLogger.Warn($"{TAG} WebView not supported on this platform");
             return null;
 #endif
         }
@@ -630,7 +630,7 @@ namespace Immutable.Passport
         {
             if (webView != null && isInitialized && webViewWidth > 0 && webViewHeight > 0)
             {
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN))
+#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
                 // For Windows UWB, update the internal resolution
                 if (webView is WindowsPassportWebView windowsWebView)
                 {
@@ -647,7 +647,7 @@ namespace Immutable.Passport
         /// </summary>
         private void Update()
         {
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN))
+#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
             // Check for pending resolution updates on Windows WebView
             if (webView is WindowsPassportWebView windowsWebView)
             {

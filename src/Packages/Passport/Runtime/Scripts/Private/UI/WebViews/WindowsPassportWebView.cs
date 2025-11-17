@@ -22,7 +22,7 @@ using UnityEditor;
 using System.Runtime.InteropServices;
 #endif
 
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN))
+#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
 using VoltstroStudios.UnityWebBrowser;
 using VoltstroStudios.UnityWebBrowser.Core;
 using VoltstroStudios.UnityWebBrowser.Core.Engines;
@@ -37,7 +37,7 @@ using Resolution = VoltstroStudios.UnityWebBrowser.Shared.Resolution;
 
 namespace Immutable.Passport
 {
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN))
+#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
     /// <summary>
     /// Windows implementation of IPassportWebView using Volt Unity Web Browser (UWB)
     /// Wraps all UWB-specific functionality in a clean, platform-agnostic interface

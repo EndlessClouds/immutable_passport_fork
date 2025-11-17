@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Immutable.Passport.Core.Logging;
 
-#if (UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX) && VUPLEX_WEBVIEW
+#if (UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX && !UNITY_STANDALONE) && VUPLEX_WEBVIEW
 using Vuplex.WebView;
 
 namespace Immutable.Passport
