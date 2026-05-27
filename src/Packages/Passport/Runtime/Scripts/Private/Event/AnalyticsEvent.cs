@@ -11,7 +11,7 @@ namespace Immutable.Passport.Event
     public class PassportAnalytics
     {
         public const string TRACK = "track";
-        public const string MODULE_NAME = "unitySdk";
+        private const string MODULE_NAME = "unitySdk";
 
         public static class EventName
         {
@@ -22,16 +22,11 @@ namespace Immutable.Passport.Event
             public const string COMPLETE_LOGIN_PKCE = "performedLoginPkce";
             public const string COMPLETE_RELOGIN = "performedRelogin";
 
-            // Connect
-            public const string START_CONNECT_IMX_PKCE = "startedConnectImxPkce";
-            public const string COMPLETE_CONNECT_IMX_PKCE = "performedConnectImxPkce";
-            public const string COMPLETE_RECONNECT = "performedReconnect";
-
             // Logout
             public const string COMPLETE_LOGOUT_PKCE = "performedLogoutPkce";
         }
 
-        public static class Properties
+        private static class Properties
         {
             public const string SUCCESS = "succeeded";
         }
@@ -41,15 +36,12 @@ namespace Immutable.Passport.Event
         {
             try
             {
-                if (properties == null)
-                {
-                    properties = new Dictionary<string, object>();
-                }
+                properties ??= new Dictionary<string, object>();
                 if (success != null)
                 {
                     properties.Add(Properties.SUCCESS, success);
                 }
-                string json = JsonUtility.ToJson(new TrackData()
+                var json = JsonUtility.ToJson(new TrackData
                 {
                     moduleName = MODULE_NAME,
                     eventName = eventName,

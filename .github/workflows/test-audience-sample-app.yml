@@ -1,0 +1,288 @@
+name: Audience SDK PlayMode (IL2CPP + Mono)
+
+on:
+  pull_request:
+  schedule:
+    # Weekly full-matrix run on the default branch. Saturday 14:00 UTC.
+    - cron: '0 14 * * 6'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# CI run id stamped into the player for CDP filtering. Per-cell id set on jobs below.
+env:
+  AUDIENCE_TEST_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  # Detects whether any Audience-relevant paths changed in this PR.
+  # schedule/workflow_dispatch always returns true to run the full matrix.
+  paths-changed:
+    runs-on: ubuntu-latest
+    outputs:
+      audience: ${{ steps.check.outputs.audience }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        run: |
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "audience=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch origin ${{ github.base_ref }} --depth=1
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD \
+              | grep -qE '^(src/Packages/Audience/|examples/audience/|\.github/workflows/test-audience-sample-app\.yml)'; then
+            echo "audience=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "audience=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # SSOT for the unity matrix and PR-only excludes. Both playmode and
+  # mobile-build consume these outputs via fromJSON. Source data lives
+  # in .github/scripts/audience/matrix-shared.json.
+  #
+  # pr_exclude in the JSON is a list of partial-cell rules using stable
+  # identifiers (unity / platform / backend). The setup step below
+  # validates the rule shape, expands each rule against live matrix
+  # data into the literal exclude objects GitHub Actions matrix.exclude
+  # expects, and asserts each rule matched exactly one cell descriptor.
+  setup:
+    needs: paths-changed
+    if: |
+      (github.event_name == 'pull_request'
+        && github.event.pull_request.head.repo.fork == false
+        && needs.paths-changed.outputs.audience == 'true')
+      || github.event_name == 'schedule'
+      || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      unity_versions: ${{ steps.set.outputs.unity_versions }}
+      scripting_backends: ${{ steps.set.outputs.scripting_backends }}
+      desktop_targets: ${{ steps.set.outputs.desktop_targets }}
+      mobile_targets: ${{ steps.set.outputs.mobile_targets }}
+      pr_exclude: ${{ steps.set.outputs.pr_exclude }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: set
+        shell: bash
+        run: |
+          set -euo pipefail
+          f=.github/scripts/audience/matrix-shared.json
+          for key in unity_versions scripting_backends desktop_targets mobile_targets; do
+            echo "$key=$(jq -c ".$key" "$f")" >> "$GITHUB_OUTPUT"
+          done
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # Reject empty rules and unknown keys before expansion.
+            # An empty exclude object would make GitHub Actions skip every cell.
+            bad=$(jq -c '
+              ["unity","platform","backend"] as $allowed
+              | [ .pr_exclude
+                  | to_entries[]
+                  | .key as $i
+                  | .value as $rule
+                  | if ($rule | length) == 0 then
+                      { rule: $i, error: "empty rule" }
+                    else
+                      ($rule | keys[] | select(. as $k | $allowed | index($k) | not))
+                      | { rule: $i, unknown_key: . }
+                    end
+                ]
+            ' "$f")
+            if [[ "$bad" != "[]" ]]; then
+              echo "pr_exclude rule shape errors: $bad" >&2
+              echo "allowed keys: unity, platform, backend; each rule needs at least one" >&2
+              exit 1
+            fi
+
+            # Expand rules into full GitHub-Actions exclude objects by joining
+            # each identifier to its full matrix entry from this same file.
+            pr_exclude=$(jq -c '
+              . as $root
+              | [ .pr_exclude[] as $r
+                  | {}
+                  | (if $r.unity    then .unity    = ($root.unity_versions[]     | select(.version == $r.unity))    else . end)
+                  | (if $r.platform then .platform = ($root.desktop_targets[]    | select(.target  == $r.platform)) else . end)
+                  | (if $r.backend  then .backend  = ($root.scripting_backends[] | select(. == $r.backend))         else . end)
+                ]
+            ' "$f")
+
+            # Each rule must produce exactly one expanded object. A mismatch
+            # means a rule references an identifier that no longer exists.
+            rule_count=$(jq '.pr_exclude | length' "$f")
+            built_count=$(jq 'length' <<<"$pr_exclude")
+            if [[ "$rule_count" != "$built_count" ]]; then
+              echo "pr_exclude rule(s) matched no cells. rules=$rule_count built=$built_count" >&2
+              echo "rules:" >&2 && jq '.pr_exclude' "$f" >&2
+              echo "built:" >&2 && jq '.' <<<"$pr_exclude" >&2
+              exit 1
+            fi
+          else
+            pr_exclude='[]'
+          fi
+          echo "pr_exclude=$pr_exclude" >> "$GITHUB_OUTPUT"
+
+  playmode:
+    needs: setup
+    name: ${{ matrix.platform.target }} / ${{ matrix.backend }} / Unity ${{ matrix.unity.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        unity: ${{ fromJSON(needs.setup.outputs.unity_versions) }}
+        platform: ${{ fromJSON(needs.setup.outputs.desktop_targets) }}
+        backend: ${{ fromJSON(needs.setup.outputs.scripting_backends) }}
+        exclude: ${{ fromJSON(needs.setup.outputs.pr_exclude) }}
+    runs-on: ${{ matrix.platform.runner }}
+    timeout-minutes: 45
+    env:
+      AUDIENCE_TEST_CELL_ID: ${{ matrix.platform.target }}-${{ matrix.backend }}-${{ matrix.unity.version }}
+
+    steps:
+      - name: Resolve job ID
+        # Resolves the GitHub-assigned numeric job ID for the current cell so
+        # the player can stamp it into Player.log and CDP rows. Lets a CDP
+        # event link straight to the cell's GHA log via the canonical URL
+        # https://github.com/{repo}/actions/runs/{run_id}/job/{job_id}.
+        # Non-blocking: if the API call fails, AUDIENCE_TEST_JOB_ID stays unset.
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          JOB_NAME: ${{ matrix.platform.target }} / ${{ matrix.backend }} / Unity ${{ matrix.unity.version }}
+        with:
+          script: |
+            const jobs = await github.paginate(
+              github.rest.actions.listJobsForWorkflowRunAttempt,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+                attempt_number: context.runAttempt,
+              }
+            );
+            const job = jobs.find(j => j.name === process.env.JOB_NAME);
+            if (!job) {
+              core.warning(`No job matching name="${process.env.JOB_NAME}"`);
+              return;
+            }
+            core.exportVariable('AUDIENCE_TEST_JOB_ID', String(job.id));
+
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: examples/audience/Library
+          key: Library-${{ matrix.backend }}-${{ matrix.platform.target }}-${{ matrix.unity.version }}-${{ hashFiles('examples/audience/Assets/**', 'examples/audience/Packages/**', 'examples/audience/ProjectSettings/**', 'src/Packages/Audience/**') }}
+          restore-keys: |
+            Library-${{ matrix.backend }}-${{ matrix.platform.target }}-${{ matrix.unity.version }}-
+            Library-${{ matrix.backend }}-${{ matrix.platform.target }}-
+
+      - name: Detect or Install Unity (Windows + macOS only)
+        if: matrix.platform.install_unity_script != ''
+        env:
+          UNITY_VERSION: ${{ matrix.unity.version }}
+          UNITY_CHANGESET: ${{ matrix.unity.changeset }}
+          BACKEND: ${{ matrix.backend }}
+        run: ${{ matrix.platform.install_unity_script }}
+
+      - name: Detect or Install VS Build Tools (StandaloneWindows64 IL2CPP only)
+        if: matrix.platform.target == 'StandaloneWindows64' && matrix.backend == 'IL2CPP'
+        shell: pwsh
+        run: .github/scripts/audience/ensure-msvc-windows.ps1
+
+      - name: Run PlayMode tests
+        env:
+          UNITY_VERSION: ${{ matrix.unity.version }}
+          TARGET: ${{ matrix.platform.target }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          AUDIENCE_TEST_PUBLISHABLE_KEY: ${{ secrets.AUDIENCE_TEST_PUBLISHABLE_KEY }}
+          AUDIENCE_SCRIPTING_BACKEND: ${{ matrix.backend }}
+        run: ${{ matrix.platform.run_playmode_script }}
+
+      - name: Publish test report
+        uses: dorny/test-reporter@v3
+        if: always()
+        with:
+          name: PlayMode (${{ matrix.backend }} / ${{ matrix.platform.target }})
+          path: artifacts/test-results.xml
+          reporter: dotnet-nunit
+          fail-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playmode-${{ matrix.backend }}-${{ matrix.platform.target }}-${{ matrix.unity.version }}
+          path: |
+            artifacts/**
+            examples/audience/Logs/**
+
+  # Mobile IL2CPP build validation. Compile-only; runtime tests need real devices.
+  mobile-build:
+    needs: setup
+    name: ${{ matrix.platform.target }} / IL2CPP / Unity ${{ matrix.unity.version }}
+    runs-on: ubuntu-latest-8-cores
+    strategy:
+      fail-fast: false
+      matrix:
+        unity: ${{ fromJSON(needs.setup.outputs.unity_versions) }}
+        platform: ${{ fromJSON(needs.setup.outputs.mobile_targets) }}
+        exclude: ${{ fromJSON(needs.setup.outputs.pr_exclude) }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: examples/audience/Library
+          key: Library-mobile-${{ matrix.platform.target }}-${{ matrix.unity.version }}-${{ hashFiles('examples/audience/Assets/**', 'examples/audience/Packages/**', 'examples/audience/ProjectSettings/**', 'src/Packages/Audience/**') }}
+          restore-keys: |
+            Library-mobile-${{ matrix.platform.target }}-${{ matrix.unity.version }}-
+            Library-mobile-${{ matrix.platform.target }}-
+
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          unityVersion: ${{ matrix.unity.version }}
+          targetPlatform: ${{ matrix.platform.target }}
+          projectPath: examples/audience
+          buildMethod: Immutable.Audience.Samples.SampleApp.Editor.${{ matrix.platform.build_player_method }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-build-${{ matrix.platform.target }}-${{ matrix.unity.version }}
+          if-no-files-found: ignore
+          path: |
+            examples/audience/Builds/Android/*.apk
+            examples/audience/Logs/**
+
+  # Required check. Passes immediately when no Audience paths changed;
+  # fails if playmode or mobile-build tests failed or were cancelled.
+  ci-gate:
+    needs: [playmode, mobile-build]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          PLAYMODE="${{ needs.playmode.result }}"
+          MOBILE="${{ needs.mobile-build.result }}"
+          if [[ "$PLAYMODE" == "failure" || "$PLAYMODE" == "cancelled" ]]; then
+            echo "::error::playmode tests $PLAYMODE" && exit 1
+          fi
+          if [[ "$MOBILE" == "failure" || "$MOBILE" == "cancelled" ]]; then
+            echo "::error::mobile-build $MOBILE" && exit 1
+          fi
+          echo "Gate passed (playmode=$PLAYMODE, mobile-build=$MOBILE)"

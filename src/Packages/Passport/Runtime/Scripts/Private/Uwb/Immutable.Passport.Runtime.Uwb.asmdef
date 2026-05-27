@@ -1,0 +1,33 @@
+{
+    "name": "Immutable.Passport.Runtime.Uwb",
+    "rootNamespace": "Immutable.Passport",
+    "references": [
+        "Immutable.Passport.Runtime.Private",
+        "Immutable.Browser.Core",
+        "Immutable.Passport.Core.Logging",
+        "UniTask",
+        "VoltstroStudios.UnityWebBrowser"
+    ],
+    "includePlatforms": [
+        "Android",
+        "Editor",
+        "iOS",
+        "macOSStandalone",
+        "WindowsStandalone64",
+        "WebGL"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "VoltstroStudios.UnityWebBrowser.Shared.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UWB_WEBVIEW"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
+
+

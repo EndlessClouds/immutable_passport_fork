@@ -1,0 +1,14 @@
+{
+    "name": "Immutable.Audience.Unity",
+    "rootNamespace": "Immutable.Audience.Unity",
+    "references": ["Immutable.Audience.Runtime"],
+    "includePlatforms": ["Android", "Editor", "iOS", "LinuxStandalone64", "macOSStandalone", "WindowsStandalone64"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

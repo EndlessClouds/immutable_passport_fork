@@ -412,20 +412,42 @@ namespace Immutable.Passport
         /// </summary>
         private IPassportWebView CreatePlatformWebView()
         {
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
+#if !IMMUTABLE_CUSTOM_BROWSER && UWB_WEBVIEW && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN))
             PassportLogger.Info($"{TAG} Creating Windows WebView (UWB)");
-            return new WindowsPassportWebView(rawImage, this);
+            try
+            {
+                var uwbType = Type.GetType("Immutable.Passport.WindowsPassportWebView, Immutable.Passport.Runtime.Uwb");
+                if (uwbType == null)
+                {
+                    PassportLogger.Error($"{TAG} WindowsPassportWebView type not found. Ensure the UWB runtime assembly is present.");
+                    return null;
+                }
+
+                var instance = Activator.CreateInstance(uwbType, rawImage, this) as IPassportWebView;
+                if (instance == null)
+                {
+                    PassportLogger.Error($"{TAG} Failed to create WindowsPassportWebView instance.");
+                    return null;
+                }
+
+                return instance;
+            }
+            catch (Exception ex)
+            {
+                PassportLogger.Error($"{TAG} Error creating Windows WebView (UWB): {ex.Message}");
+                return null;
+            }
 #elif UNITY_IOS && VUPLEX_WEBVIEW
             PassportLogger.Info($"{TAG} Creating iOS WebView (Vuplex)");
             return new iOSPassportWebView(rawImage);
 #elif UNITY_ANDROID && VUPLEX_WEBVIEW
             PassportLogger.Info($"{TAG} Creating Android WebView (Vuplex)");
             return new AndroidVuplexWebView(rawImage);
-#elif (UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX && !UNITY_STANDALONE) && VUPLEX_WEBVIEW
+#elif (UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX) && VUPLEX_WEBVIEW
             PassportLogger.Info($"{TAG} Creating MacOS WebView (Vuplex)");
             return new MacOSPassportWebView(rawImage);
 #else
-            PassportLogger.Warn($"{TAG} WebView not supported on this platform");
+            PassportLogger.Error($"{TAG} WebView not supported on this platform");
             return null;
 #endif
         }
@@ -524,6 +546,9 @@ namespace Immutable.Passport
                     {
                         case "opted_in":
                             loginOptions.marketingConsentStatus = MarketingConsentStatus.OptedIn;
+                            break;
+                        case "subscribed":
+                            loginOptions.marketingConsentStatus = MarketingConsentStatus.Subscribed;
                             break;
                         case "unsubscribed":
                             loginOptions.marketingConsentStatus = MarketingConsentStatus.Unsubscribed;
@@ -630,11 +655,11 @@ namespace Immutable.Passport
         {
             if (webView != null && isInitialized && webViewWidth > 0 && webViewHeight > 0)
             {
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
-                // For Windows UWB, update the internal resolution
-                if (webView is WindowsPassportWebView windowsWebView)
+#if UWB_WEBVIEW && !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN))
+                // For Windows UWB, update the internal resolution if the view supports it
+                if (webView is IResizablePassportWebView resizable)
                 {
-                    windowsWebView.UpdateUWBResolution(webViewWidth, webViewHeight);
+                    resizable.UpdateInternalResolution(webViewWidth, webViewHeight);
                 }
 #endif
                 // For other platforms (Vuplex), the RectTransform size is sufficient
@@ -647,11 +672,11 @@ namespace Immutable.Passport
         /// </summary>
         private void Update()
         {
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
-            // Check for pending resolution updates on Windows WebView
-            if (webView is WindowsPassportWebView windowsWebView)
+#if UWB_WEBVIEW && !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN))
+            // Check for pending resolution updates on Windows WebView if the view supports it
+            if (webView is IResizablePassportWebView resizable)
             {
-                windowsWebView.UpdatePendingResolution();
+                resizable.UpdatePendingResolution();
             }
 #endif
         }

@@ -2,12 +2,6 @@ using System.Collections.Generic;
 using System;
 using System.Text.RegularExpressions;
 #if UNITY_STANDALONE_WIN || (UNITY_ANDROID && UNITY_EDITOR_WIN) || (UNITY_IPHONE && UNITY_EDITOR_WIN)
-#if !IMMUTABLE_CUSTOM_BROWSER
-using VoltstroStudios.UnityWebBrowser;
-using VoltstroStudios.UnityWebBrowser.Core;
-using VoltstroStudios.UnityWebBrowser.Shared;
-using VoltstroStudios.UnityWebBrowser.Logging;
-#endif
 #elif (UNITY_ANDROID && !UNITY_EDITOR_WIN) || (UNITY_IPHONE && !UNITY_EDITOR_WIN) || UNITY_STANDALONE_OSX || UNITY_WEBGL
 using Immutable.Browser.Gree;
 #endif
@@ -71,10 +65,6 @@ namespace Immutable.Passport
             {
                 _logLevel = value;
                 PassportLogger.CurrentLogLevel = _logLevel;
-
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_ANDROID && UNITY_EDITOR_WIN) || (UNITY_IPHONE && UNITY_EDITOR_WIN))
-                SetDefaultWindowsBrowserLogLevel();
-#endif
             }
         }
 
@@ -100,10 +90,6 @@ namespace Immutable.Passport
             {
                 _redactTokensInLogs = value;
                 PassportLogger.RedactionHandler = value ? RedactTokenValues : null;
-
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_ANDROID && UNITY_EDITOR_WIN) || (UNITY_IPHONE && UNITY_EDITOR_WIN))
-                SetWindowsRedactionHandler();
-#endif
             }
         }
 
@@ -229,9 +215,56 @@ namespace Immutable.Passport
                     throw new PassportException("When 'IMMUTABLE_CUSTOM_BROWSER' is defined in Scripting Define Symbols, " + 
                         " 'windowsWebBrowserClient' must not be null.");
 #else
-                    _webBrowserClient = gameObject.AddComponent<UwbWebView>();
-                    await ((UwbWebView)_webBrowserClient).Init(engineStartupTimeoutMs, _redactTokensInLogs, RedactTokenValues);
-                    _readySignalReceived = true;
+#if UWB_WEBVIEW
+                    var uwbType = Type.GetType("Immutable.Passport.UwbWebView, Immutable.Passport.Runtime.Uwb");
+                    if (uwbType == null)
+                    {
+                        throw new PassportException(
+                            "UnityWebBrowser integration is enabled (UWB_WEBVIEW) but UwbWebView type could not be found. " +
+                            "Ensure the Immutable.Passport.Runtime.Uwb assembly is present.",
+                            PassportErrorType.INITALISATION_ERROR);
+                    }
+
+                    var component = gameObject.AddComponent(uwbType) as MonoBehaviour;
+                    if (component is not IWebBrowserClient browserClient)
+                    {
+                        throw new PassportException(
+                            "UwbWebView does not implement IWebBrowserClient.",
+                            PassportErrorType.INITALISATION_ERROR);
+                    }
+
+                    _webBrowserClient = browserClient;
+
+                    var initMethod = uwbType.GetMethod("Init", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (initMethod == null)
+                    {
+                        throw new PassportException(
+                            "UwbWebView.Init method could not be found.",
+                            PassportErrorType.INITALISATION_ERROR);
+                    }
+
+                    try
+                    {
+                        var taskObj = initMethod.Invoke(component, new object[] { engineStartupTimeoutMs, _redactTokensInLogs, (Func<string, string>)RedactTokenValues });
+                        if (taskObj is UniTask initTask)
+                        {
+                            await initTask;
+                        }
+
+                        _readySignalReceived = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new PassportException(
+                            $"Failed to initialise UwbWebView: {ex.Message}",
+                            PassportErrorType.INITALISATION_ERROR);
+                    }
+#else
+                    throw new PassportException(
+                        "UnityWebBrowser integration is not available. Either install UnityWebBrowser (enabling the UWB_WEBVIEW scripting define symbol) " +
+                        "or provide a custom IWindowsWebBrowserClient when calling Passport.Init.",
+                        PassportErrorType.INITALISATION_ERROR);
+#endif
 #endif
                 }
 #elif (UNITY_ANDROID && !UNITY_EDITOR_WIN) || (UNITY_IPHONE && !UNITY_EDITOR_WIN) || UNITY_STANDALONE_OSX || UNITY_WEBGL
@@ -304,17 +337,6 @@ namespace Immutable.Passport
         }
 
         /// <summary>
-        /// Logs the user into Passport using Authorisation Code Flow with Proof Key for Code Exchange (PKCE) and sets up the Immutable X provider.
-        /// This opens the user's default browser on desktop or an in-app browser on mobile.
-        /// <param name="useCachedSession">If true, Passport will attempt to re-authenticate the player using stored credentials. If re-authentication fails, it won't automatically prompt the user to log in again.</param>
-        /// <param name="directLoginOptions">Direct login options for authentication (defaults to email method).
-        /// </summary>
-        public async UniTask<bool> ConnectImx(bool useCachedSession = false, DirectLoginOptions directLoginOptions = null)
-        {
-            return await GetPassportImpl().ConnectImx(useCachedSession, directLoginOptions);
-        }
-
-        /// <summary>
         /// Completes the login process by storing tokens received from the Bring Your Own Auth API token exchange endpoint.
         /// This method enables authentication using existing auth systems without requiring users to log in twice.q
         /// </summary>
@@ -325,17 +347,6 @@ namespace Immutable.Passport
         public async UniTask<bool> CompleteLogin(TokenResponse request)
         {
             return await GetPassportImpl().CompleteLogin(request);
-        }
-
-        /// <summary>
-        /// Gets the wallet address of the logged in user.
-        /// <returns>
-        /// The wallet address
-        /// </returns>
-        /// </summary>
-        public async UniTask<string?> GetAddress()
-        {
-            return await GetPassportImpl().GetAddress();
         }
 
         /// <summary>
@@ -356,25 +367,6 @@ namespace Immutable.Passport
         public UniTask<bool> HasCredentialsSaved()
         {
             return GetPassportImpl().HasCredentialsSaved();
-        }
-
-        /// <summary>
-        /// Checks if the user is registered off-chain
-        /// <returns>
-        /// True if the user is registered with Immutable X, false otherwise
-        /// </returns>
-        /// </summary>
-        public async UniTask<bool> IsRegisteredOffchain()
-        {
-            return await GetPassportImpl().IsRegisteredOffchain();
-        }
-
-        /// <summary>
-        /// Registers the user to Immutable X if they are not already registered
-        /// </summary>
-        public async UniTask<RegisterUserResponse?> RegisterOffchain()
-        {
-            return await GetPassportImpl().RegisterOffchain();
         }
 
         /// <summary>
@@ -431,28 +423,6 @@ namespace Immutable.Passport
         public async UniTask<List<string>> GetLinkedAddresses()
         {
             return await GetPassportImpl().GetLinkedAddresses();
-        }
-
-        /// <summary>
-        /// Create a new transfer request with the given unsigned transfer request.
-        /// <returns>
-        /// The transfer response if successful
-        /// </returns>
-        /// </summary>
-        public async UniTask<CreateTransferResponseV1?> ImxTransfer(UnsignedTransferRequest request)
-        {
-            return await GetPassportImpl().ImxTransfer(request);
-        }
-
-        /// <summary>
-        /// Create a new batch nft transfer request with the given transfer details.
-        /// <returns>
-        /// The transfer response if successful
-        /// </returns>
-        /// </summary>
-        public async UniTask<CreateBatchTransferResponse?> ImxBatchNftTransfer(NftTransferDetails[] details)
-        {
-            return await GetPassportImpl().ImxBatchNftTransfer(details);
         }
 
         /// <summary>
@@ -554,33 +524,6 @@ namespace Immutable.Passport
         public void ClearStorage()
         {
             GetPassportImpl().ClearStorage();
-        }
-#endif
-
-#if !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_ANDROID && UNITY_EDITOR_WIN) || (UNITY_IPHONE && UNITY_EDITOR_WIN))
-        /// <summary>
-        /// Updates the log severity for the default Windows browser based on the current SDK log level.
-        /// </summary>
-        private static void SetDefaultWindowsBrowserLogLevel()
-        {
-            if (Instance?._webBrowserClient is WebBrowserClient browserClient)
-            {
-                browserClient.logSeverity = _logLevel switch
-                {
-                    LogLevel.Debug => LogSeverity.Debug,
-                    LogLevel.Warn => LogSeverity.Warn,
-                    LogLevel.Error => LogSeverity.Error,
-                    _ => LogSeverity.Info
-                };
-            }
-        }
-
-        private static void SetWindowsRedactionHandler()
-        {
-            if (Instance?._webBrowserClient is WebBrowserClient browserClient)
-            {
-                browserClient.Logger = new DefaultUnityWebBrowserLogger(redactionHandler: _redactTokensInLogs ? RedactTokenValues : null);
-            }
         }
 #endif
 

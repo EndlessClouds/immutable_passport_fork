@@ -6,8 +6,7 @@
         "Immutable.Browser.Core",
         "Immutable.Browser.Gree",
         "Immutable.Passport.Runtime.Private",
-        "Immutable.Passport.Core.Logging",
-        "VoltstroStudios.UnityWebBrowser"
+        "Immutable.Passport.Core.Logging"
     ],
     "includePlatforms": [
         "Android",
@@ -22,8 +21,7 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "Newtonsoft.Json.dll",
-        "VoltstroStudios.UnityWebBrowser.Shared.dll"
+        "Newtonsoft.Json.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": [

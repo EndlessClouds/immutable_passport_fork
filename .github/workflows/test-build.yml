@@ -4,7 +4,17 @@ name: Test & Build
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/Packages/Passport/**'
+      - 'examples/passport/**'
+      - 'examples/passport-unity6/**'
+      - 'Plugins/**'
   pull_request:
+    paths:
+      - 'src/Packages/Passport/**'
+      - 'examples/passport/**'
+      - 'examples/passport-unity6/**'
+      - 'Plugins/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,7 +40,7 @@ jobs:
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
           unityVersion: 2021.3.26f1
-          projectPath: './sample'
+          projectPath: './examples/passport'
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           testMode: 'EditMode'
       - uses: actions/upload-artifact@v4
@@ -61,7 +71,7 @@ jobs:
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
           unityVersion: 6000.0.58f2
-          projectPath: './sample-unity6'
+          projectPath: './examples/passport-unity6'
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           testMode: 'EditMode'
       - uses: actions/upload-artifact@v4
@@ -85,7 +95,6 @@ jobs:
         targetPlatform:
           - iOS
           - Android
-          - WebGL
 #          - StandaloneOSX
           - StandaloneWindows64
     steps:
@@ -109,13 +118,7 @@ jobs:
         with:
           unityVersion: 2021.3.26f1
           targetPlatform: ${{ matrix.targetPlatform }}
-          projectPath: sample
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@4.1.3
-        if: matrix.targetPlatform == 'WebGL'
-        with:
-          branch: gh-pages
-          folder: build/WebGL/WebGL
+          projectPath: examples/passport
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -154,7 +157,7 @@ jobs:
         with:
           unityVersion: 6000.0.58f2
           targetPlatform: ${{ matrix.targetPlatform }}
-          projectPath: sample-unity6
+          projectPath: examples/passport-unity6
       - uses: actions/upload-artifact@v4
         if: always()
         with:
