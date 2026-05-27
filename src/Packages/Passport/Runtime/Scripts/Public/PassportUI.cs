@@ -655,7 +655,7 @@ namespace Immutable.Passport
         {
             if (webView != null && isInitialized && webViewWidth > 0 && webViewHeight > 0)
             {
-#if UWB_WEBVIEW && !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN !UNITY_STANDALONE))
+#if UWB_WEBVIEW && !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
                 // For Windows UWB, update the internal resolution if the view supports it
                 if (webView is IResizablePassportWebView resizable)
                 {
@@ -672,7 +672,7 @@ namespace Immutable.Passport
         /// </summary>
         private void Update()
         {
-#if UWB_WEBVIEW && !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN !UNITY_STANDALONE))
+#if UWB_WEBVIEW && !IMMUTABLE_CUSTOM_BROWSER && (UNITY_STANDALONE_WIN || (UNITY_EDITOR && UNITY_EDITOR_WIN && !UNITY_STANDALONE))
             // Check for pending resolution updates on Windows WebView if the view supports it
             if (webView is IResizablePassportWebView resizable)
             {
